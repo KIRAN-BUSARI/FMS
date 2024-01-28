@@ -6,6 +6,13 @@ import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 import zod from "zod";
 
+const cookieOptions = {
+    secure: process.env.NODE_ENV === 'development' ? true : false,
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    httpOnly: true,
+    secure: true
+}
+
 const generateAccessAndRefereshTokens = async (userId) => {
     try {
         const user = await User.findById(userId)
@@ -73,6 +80,14 @@ const registerUser = asyncHandler(async (req, res) => {
         throw new ApiError(500, "Something went wrong while registering the user")
     }
 
+    await user.save();
+
+    const token = await user.generateAccessToken();
+
+    user.password = undefined;
+
+    res.cookie('token', token, cookieOptions);
+
     return res.status(201).json(
         new ApiResponse(200, createdUser, "User registered Successfully")
     )
@@ -111,27 +126,24 @@ const loginUser = asyncHandler(async (req, res) => {
         throw new ApiError(404, "User does not exist")
     }
 
-    // const isPasswordValid = await user.isPasswordCorrect(password);
+    // const isPasswordValid = await user.isPasswordCorrect(password)
 
     // if (!isPasswordValid) {
-    //     throw new ApiError(401, "Invalid user credentials")
+    //     throw new ApiError(400, "Invalid Password")
     // }
 
     const { accessToken, refreshToken } = await generateAccessAndRefereshTokens(user._id)
 
 
     const loggedInUser = await User.findById(user._id).select("-password -refreshToken");
-    console.log(loggedInUser);
+    // console.log(loggedInUser);
 
-    const options = {
-        httpOnly: true,
-        secure: true
-    }
+
 
     return res
         .status(200)
-        .cookie("accessToken", accessToken, options)
-        .cookie("refreshToken", refreshToken, options)
+        .cookie("accessToken", accessToken, cookieOptions)
+        .cookie("refreshToken", refreshToken, cookieOptions)
         .json(
             new ApiResponse(
                 200,
@@ -156,16 +168,10 @@ const logoutUser = asyncHandler(async (req, res) => {
             new: true
         }
     )
-
-    const options = {
-        httpOnly: true,
-        secure: true
-    }
-
     return res
         .status(200)
-        .clearCookie("accessToken", options)
-        .clearCookie("refreshToken", options)
+        .clearCookie("accessToken", cookieOptions)
+        .clearCookie("refreshToken", cookieOptions)
         .json(new ApiResponse(200, {}, "User logged Out"))
 })
 
