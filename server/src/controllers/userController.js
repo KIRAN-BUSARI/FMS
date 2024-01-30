@@ -2,7 +2,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js"
 import { User } from "../models/user.model.js"
 import { ApiResponse } from "../utils/ApiResponse.js";
-import zod from "zod";
+import zod, { isAsync } from "zod";
 
 const cookieOptions = {
     secure: process.env.NODE_ENV === 'development' ? true : false,
@@ -175,9 +175,43 @@ const logoutUser = asyncHandler(async (req, res) => {
         .json(new ApiResponse(200, {}, "User logged Out"))
 })
 
+const changePassword = asyncHandler(async (req, res) => {
+    const changePasswordSchema = zod.object({
+        oldPassword: zod.string().min(8).max(20).trim(),
+        newPassword: zod.string().min(8).max(20).trim(),
+        confirmPassword: zod.string().min(8).max(20).trim()
+    })
+
+    const { oldPassword, newPassword, confirmNewPassword } = req.body;
+    const changePasswordValidation = changePasswordSchema.safeParse(req.body);
+
+    if (changePasswordValidation.success) {
+        throw new ApiError(400, "All fields are Required")
+    }
+
+    const user = await User.findById(req.user?._id).select("password");
+
+    const isPasswordValid = user.comparePassword(oldPassword)
+    if (!isPasswordValid) {
+        throw new ApiError(400, "Invalid Password")
+    }
+
+    if (newPassword !== confirmNewPassword) {
+        throw new ApiError(400, "Password does not match")
+    }
+
+    user.password = newPassword;
+
+    await user.save({ validateBeforeSave: false })
+
+    return res
+        .status(200)
+        .json(new ApiResponse(200, user, "Password Changed Successfully"))
+})
 
 export {
     registerUser,
     loginUser,
     logoutUser,
+    changePassword
 }
