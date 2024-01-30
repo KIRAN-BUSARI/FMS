@@ -2,8 +2,6 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js"
 import { User } from "../models/user.model.js"
 import { ApiResponse } from "../utils/ApiResponse.js";
-import jwt from "jsonwebtoken";
-import mongoose from "mongoose";
 import zod from "zod";
 
 const cookieOptions = {
@@ -80,8 +78,6 @@ const registerUser = asyncHandler(async (req, res) => {
         throw new ApiError(500, "Something went wrong while registering the user")
     }
 
-    await user.save();
-
     const token = await user.generateAccessToken();
 
     user.password = undefined;
@@ -108,9 +104,11 @@ const loginUser = asyncHandler(async (req, res) => {
         confirmPassword: zod.string().min(8).max(20).trim()
     })
 
-    const { email, password, confirmPassword } = loginSchema.parse(req.body)
+    const { email, password, confirmPassword } = req.body;
 
-    if (!email || !password || !confirmPassword) {
+    const loginValidation = loginSchema.safeParse(req.body);
+
+    if (!loginValidation.success) {
         throw new ApiError(400, "All fields are required")
     }
 
@@ -120,25 +118,28 @@ const loginUser = asyncHandler(async (req, res) => {
 
     const user = await User.findOne({
         email
-    })
+    }).select("+password") // Password is not available by default so we need to specify by default
 
     if (!user) {
         throw new ApiError(404, "User does not exist")
     }
 
-    // const isPasswordValid = await user.isPasswordCorrect(password)
+    const isPasswordValid = await user.comparePassword(password);
 
-    // if (!isPasswordValid) {
-    //     throw new ApiError(400, "Invalid Password")
-    // }
+    if (!isPasswordValid) {
+        throw new ApiError(400, "Password is incorrect")
+    }
 
-    const { accessToken, refreshToken } = await generateAccessAndRefereshTokens(user._id)
+    user.save();
 
+    const { accessToken, refreshToken } = await generateAccessAndRefereshTokens(user._id);
 
     const loggedInUser = await User.findById(user._id).select("-password -refreshToken");
     // console.log(loggedInUser);
 
-
+    if (!loggedInUser) {
+        throw new ApiError(500, "Something went wrong while logging in the user")
+    }
 
     return res
         .status(200)
@@ -153,7 +154,6 @@ const loginUser = asyncHandler(async (req, res) => {
                 "User logged In Successfully"
             )
         )
-
 })
 
 const logoutUser = asyncHandler(async (req, res) => {
