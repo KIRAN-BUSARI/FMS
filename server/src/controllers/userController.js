@@ -189,7 +189,7 @@ const changePassword = asyncHandler(async (req, res) => {
         throw new ApiError(400, "All fields are Required")
     }
 
-    const user = await User.findById(req.user?._id).select("password");
+    const user = await User.findById(req.user?._id).select("+password");
 
     const isPasswordValid = user.comparePassword(oldPassword)
     if (!isPasswordValid) {
