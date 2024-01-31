@@ -2,7 +2,9 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js"
 import { User } from "../models/user.model.js"
 import { ApiResponse } from "../utils/ApiResponse.js";
-import zod, { isAsync } from "zod";
+import zod from "zod";
+import jwt from "jsonwebtoken";
+
 
 const cookieOptions = {
     secure: process.env.NODE_ENV === 'development' ? true : false,
@@ -210,9 +212,25 @@ const changePassword = asyncHandler(async (req, res) => {
 })
 
 const getCurrentUser = asyncHandler(async (req, res) => {
+    const { refreshToken } = req.cookies;
+
+    if (!refreshToken) {
+        throw new ApiError(404, "Signin to access this route")
+    }
+
+    const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
+
+    if (!decoded) {
+        throw new ApiError(404, "User does not exist")
+    }
+
+    const userId = decoded?._id;
+
+    const user = await User.findById(userId);
+
     return res
         .status(200)
-        .json(new ApiResponse(200, req.user, "User Fetched Successfully"))
+        .json(new ApiResponse(200, user, "User Fetched Successfully"))
 })
 
 export {
