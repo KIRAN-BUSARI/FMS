@@ -160,7 +160,7 @@ const loginUser = asyncHandler(async (req, res) => {
 
 const logoutUser = asyncHandler(async (req, res) => {
     await User.findByIdAndUpdate(
-        req.user._id,
+        req.user?._id,
         {
             $unset: {
                 refreshToken: 1 // this removes the field from document
@@ -174,7 +174,7 @@ const logoutUser = asyncHandler(async (req, res) => {
         .status(200)
         .clearCookie("accessToken", cookieOptions)
         .clearCookie("refreshToken", cookieOptions)
-        .json(new ApiResponse(200, {}, "User logged Out"))
+        .json(new ApiResponse(200, {}, "User logged Out Successfully"))
 })
 
 const changePassword = asyncHandler(async (req, res) => {
@@ -191,17 +191,36 @@ const changePassword = asyncHandler(async (req, res) => {
         throw new ApiError(400, "All fields are Required")
     }
 
-    const user = await User.findById(req.user?._id).select("+password");
-
-    const isPasswordValid = user.comparePassword(oldPassword)
-    if (!isPasswordValid) {
-        throw new ApiError(400, "Invalid Password")
-    }
-
     if (newPassword !== confirmNewPassword) {
         throw new ApiError(400, "Password does not match")
     }
 
+    const { refreshToken } = req.cookies;
+
+    if (!refreshToken) {
+        throw new ApiError(404, "Signin to access this route")
+    }
+
+    const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
+
+    if (!decoded) {
+        throw new ApiError(404, "User does not exist")
+    }
+
+    const userId = decoded?._id;
+
+    const user = await User.findById(userId).select("+password");
+
+    const isPasswordValid = await user.comparePassword(oldPassword);
+    console.log(isPasswordValid);
+
+    if (!isPasswordValid) {
+        throw new ApiError(400, "Invalid Password")
+    }
+
+    if (newPassword === oldPassword) {
+        throw new ApiError(400, "New Password cannot be same as old password")
+    }
     user.password = newPassword;
 
     await user.save({ validateBeforeSave: false })

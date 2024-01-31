@@ -6,7 +6,7 @@ const router = Router();
 
 router.route("/signup").post(registerUser);
 router.route("/login").post(loginUser);
-router.route("/logout").post(verifyJWT, logoutUser);
+router.route("/logout").delete(verifyJWT, logoutUser);
 router.route("/changePassword").post(verifyJWT, changePassword)
 router.route("/getUser").get(getCurrentUser)
 
