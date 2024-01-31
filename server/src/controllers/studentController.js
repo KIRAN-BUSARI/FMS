@@ -19,7 +19,7 @@ const createStudent = asyncHandler(async (req, res) => {
     const { fullName, USN, email, phone, department, semester, seatType } = req.body;
 
     const validSchema = createStudentSchema.safeParse(req.body);
-    if (!validSchema) {
+    if (!validSchema.success) {
         throw new ApiError(400, "All fields are required");
     }
 
