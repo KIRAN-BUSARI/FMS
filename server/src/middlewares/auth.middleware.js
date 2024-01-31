@@ -24,10 +24,44 @@ export const verifyJWT = asyncHandler(async (req, _, next) => {
 
 export const authorizeRoles = (...roles) =>
     asyncHandler(async (req, _res, next) => {
-        if (!roles.includes(req.user?.roles)) {
-            return next(
-                new ApiError(403, "Unauthorized access to these Routes")
-            );
+        const token = req.cookies?.accessToken || req.header("Authorization")?.replace("Bearer ", "")
+        // console.log(token);
+        if (!token) {
+            throw new ApiError(401, "Unauthorized request")
+        }
+        const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET)
+
+        if (!decoded.role) {
+            throw new ApiError(401, "Unauthorized request")
+        }
+
+        req.user = req.user || {};
+
+        req.user.role = decoded?.role
+        // console.log(req.user.role);
+        // const role = decoded?.role
+
+        // if (!role) {
+        //     throw new ApiError(401, "Unauthorized request")
+        // }
+
+        // console.log(roles);
+        // console.log(req.user.role);
+        if (!roles.includes(req.user.role)) {
+            throw new ApiError(403, "Unauthorized access to these Routes")
         }
         next();
     });
+
+export const isLoggedIn = asyncHandler(async (req, _res, next) => {
+    const { token } = req.cookies;
+    if (!token) {
+        throw new ApiError("Unauthorized, please login to continue", 401);
+    }
+    const decoded = await jwt.verify(token, process.env.JWT_SECRET);
+    if (!decoded) {
+        throw new ApiError("Unauthorized, please login to continue", 401);
+    }
+    req.user = decoded;
+    next();
+});

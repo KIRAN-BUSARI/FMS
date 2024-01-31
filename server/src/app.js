@@ -20,6 +20,8 @@ app.use(cookieParser());
 
 // Routes
 import userRoutes from "./routes/user.routes.js";
+import studentRoutes from "./routes/student.routes.js";
 app.use("/api/v1/user", userRoutes);
+app.use("/api/v1/student", studentRoutes);
 
 export { app };
