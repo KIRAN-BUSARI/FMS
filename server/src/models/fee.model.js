@@ -9,6 +9,21 @@ const feeSchema = new Schema({
         type: Number,
         required: true,
         trim: true
+    },
+    date: {
+        type: Date,
+        default: Date.now
+    },
+    paid: {
+        type: Boolean,
+        default: false
+    },
+    datePaid: {
+        type: Date,
+        required: true
+    },
+    receipt: {
+        type: String
     }
 }, {
     timestamps: true
