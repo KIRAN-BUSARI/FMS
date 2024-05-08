@@ -1,2 +1,3 @@
-## This is a full stack project based on Fee Management Syste
+## This is a full stack project for Fee Management System
+
 # using M-E-R-N
