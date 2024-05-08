@@ -1,11 +1,19 @@
 import mongoose, { Schema } from "mongoose";
+// import jwt from "jsonwebtoken";
+// import bcrypt from "bcrypt";
 
 const studentSchema = new Schema({
     userId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'
     },
-    fullName: {
+    firstName: {
+        type: String,
+        required: true,
+        lowercase: true,
+        trim: true
+    },
+    lastName: {
         type: String,
         required: true,
         lowercase: true,
@@ -34,6 +42,7 @@ const studentSchema = new Schema({
     department: {
         type: String,
         required: true,
+        lowercase: true,
         trim: true
     },
     semester: {
@@ -44,8 +53,9 @@ const studentSchema = new Schema({
     seatType: {
         type: String,
         required: true,
+        lowercase: true,
         trim: true,
-        enum: ["MANAGEMENT", "KCET", "OTHER"],
+        enum: ["MANAGEMENT", "KCET", "COMED-K", "OTHER"],
         default: "MANAGEMENT"
     }
 }, {
@@ -53,3 +63,11 @@ const studentSchema = new Schema({
 })
 
 export const Student = mongoose.model("Student", studentSchema);
+
+// TODO: Need to check the response in the user and make changes
+/* 
+studentSchema.methods.generateStudentAccessToken = function () {
+    return jwt.sign(
+        
+    )
+} */
